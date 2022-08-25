@@ -35,7 +35,10 @@ QualityCheck:
 iHS:
   maf:  0.05
   bins:  40
-
+  pop:  ['Adikarnataka' , 'Deshastha_Brhamin' , 'Iyengar' , 'Kolis' , 'Konkanastha_brahmin' , 'Lingayath' , 'Marathas', 'Nadar' , 'Naidu' , 'Namboodari' , 'Parayan' , 'Vakkaliga' , 'Vidiki_Brhamin']
+  pop_type:  Pop
+  
+  
 xpEHH:
   pop: ['OWN']
   reference_pop:  ['AFR' , 'AMR' , 'EAS' , 'EUR' , 'SAS']

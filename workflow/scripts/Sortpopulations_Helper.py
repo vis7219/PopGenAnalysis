@@ -62,8 +62,8 @@ try:
 except FileNotFoundError:
     pass
 
-file.to_csv("results/3_Phasing/7_FilteredPop.csv", index = None)
+file.to_csv("results/FilteredPop.csv", index = None)
 
 sample_list = file['ID']
 
-sample_list.to_csv('results/3_Phasing/7_SampleList.txt', index = None , header = None)
+sample_list.to_csv('results/SampleList.txt', index = None , header = None)

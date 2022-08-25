@@ -73,9 +73,7 @@ treemix_LDCoefficient = config['TreeMIX']['LDPruning']['CorrelationCoefficient']
 
 rule all:
     input:
-        expand("results/1_QualityCheck/9_{ID}_Heterozygosity{extension}",
-            extension = ['.psam' , '.pvar' , '.pgen'],
-            ID = [own_ID , ref_ID])
+        'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
 
         # expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
         #     ihs_bins = [ihs_bins],
@@ -296,6 +294,23 @@ rule HeterozygosityCheck:
                 " --out results/1_QualityCheck/9_{wildcards.ID}_Heterozygosity --threads {threads} --silent"
             )
 
+rule CreatingNewPopFile:
+    input:
+        expand("results/1_QualityCheck/9_{own_ID}_Heterozygosity{extension}",
+            extension = ['.psam' , '.pvar' , '.pgen'],
+            own_ID = [own_ID]),
+        expand("results/1_QualityCheck/9_{ref_ID}_Heterozygosity{extension}",
+            extension = ['.psam' , '.pvar' , '.pgen'],
+            ref_ID = [ref_ID])
+
+    output:
+        "results/FilteredPop.csv",
+        "results/SampleList.txt"
+    conda: "envs/pandas_env.yaml"
+    shell:
+        "python workflow/scripts/Sortpopulations_Helper.py --file config/{pop_file}"
+        " --own {own_ID} --ref {ref_ID};"
+
 rule RemoveALLMissingVariants:
     input:
         expand("results/1_QualityCheck/9_{ID}_Heterozygosity{extension}",
@@ -465,7 +480,8 @@ rule Merge_RemoveDupes:
 rule SortPopulations:
     input:
         multiext('results/3_Phasing/6_Merged_RemoveDuplicates',
-            '.pgen' , '.pvar' , '.psam')
+            '.pgen' , '.pvar' , '.psam'),
+        "results/FilteredPop.csv"
         
     output:
         'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
@@ -475,7 +491,7 @@ rule SortPopulations:
         "python workflow/scripts/Sortpopulations_Helper.py --file config/{pop_file}"
         " --own {own_ID} --ref {ref_ID};"
 
-        "workflow/software/plink2 --pfile results/3_Phasing/6_Merged_RemoveDuplicates --indiv-sort f results/3_Phasing/7_SampleList.txt"
+        "workflow/software/plink2 --pfile results/3_Phasing/6_Merged_RemoveDuplicates --indiv-sort f results/SampleList.txt"
         " --make-pgen --silent --threads {threads} --out results/3_Phasing/7_Merged_SortedPopulations;"
 
         "workflow/software/plink2 --pfile results/3_Phasing/7_Merged_SortedPopulations --recode vcf bgz --silent"
