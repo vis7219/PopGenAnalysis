@@ -21,10 +21,10 @@ QualityCheck:
       
 
   ref:
-    geno:  0.03
-    mind:  1
+    geno:  0.02
+    mind:  0.03
     maf:  0.001
-    hwe:  1e-7
+    hwe:  1e-6
     heterozygosity:
       StandardDeviations:  False
       LDPruning:
