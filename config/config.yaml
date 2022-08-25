@@ -1,0 +1,69 @@
+samples:
+  own:  1011GI.vcf.gz
+  ref:  1KGP.vcf.gz
+
+population_file: Pop.csv
+chromosome: 3
+threads:  8
+
+QualityCheck:
+  own:
+    geno:  0.02
+    mind:  1
+    maf:  0.001
+    hwe:  1e-6
+    heterozygosity:
+      StandardDeviations:  3
+      LDPruning:
+        WindowSize:  1000
+        Shift:  10
+        CorrelationCoefficient:  0.15
+      
+
+  ref:
+    geno:  0.03
+    mind:  1
+    maf:  0.001
+    hwe:  1e-7
+    heterozygosity:
+      StandardDeviations:  False
+      LDPruning:
+        WindowSize:  1000
+        Shift:  10
+        CorrelationCoefficient:  0.15
+
+iHS:
+  maf:  0.05
+  bins:  40
+
+xpEHH:
+  pop: ['OWN']
+  reference_pop:  ['AFR' , 'AMR' , 'EAS' , 'EUR' , 'SAS']
+  pop_type:  SuperPop
+  mapping_pop:  ['OWN']
+  bins:  100
+
+ADMIXTURE:
+  K:  4
+  iterations:  3
+  LDPruning:
+    WindowSize:  1000
+    Shift:  10
+    CorrelationCoefficient:  0.15
+
+SmartPCA:
+  LDPruning:
+    WindowSize:  1000
+    Shift:  10
+    CorrelationCoefficient:  0.15
+  
+  Ethnicity_pop: ['OWN']
+  pop_type: SuperPop
+
+TreeMIX:
+  Root:  YRI
+  MigrationEdges:  10
+  LDPruning:
+    WindowSize:  1000
+    Shift:  10
+    CorrelationCoefficient:  0.15

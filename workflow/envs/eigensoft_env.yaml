@@ -1,0 +1,21 @@
+name: eigensoft
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=1_gnu
+  - eigensoft=7.2.1=h7f93715_4
+  - gsl=2.7=he838d99_0
+  - libblas=3.9.0=13_linux64_openblas
+  - libcblas=3.9.0=13_linux64_openblas
+  - libgcc-ng=11.2.0=h1d223b6_12
+  - libgfortran=3.0.0=1
+  - libgfortran-ng=11.2.0=h69a702a_12
+  - libgfortran5=11.2.0=h5c6108e_12
+  - libgomp=11.2.0=h1d223b6_12
+  - libopenblas=0.3.18=pthreads_h8fe5266_0
+  - openblas=0.3.18=pthreads_h4748800_0
+  - perl=5.32.1=1_h7f98852_perl5
+prefix: /home/cbr/miniconda3/envs/eigensoft

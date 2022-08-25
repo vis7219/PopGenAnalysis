@@ -1,0 +1,828 @@
+configfile: "config/config.yaml"
+use_threads = config['threads']
+pop_file = config['population_file']
+chromosome_no = config['chromosome']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_ID = config['samples']['own'].split(".")[0]
+ref_ID = config['samples']['ref'].split(".")[0]
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_geno = config['QualityCheck']['own']['geno']
+ref_geno = config['QualityCheck']['ref']['geno']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_mind = config['QualityCheck']['own']['mind']
+ref_mind = config['QualityCheck']['ref']['mind']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_maf = config['QualityCheck']['own']['maf']
+ref_maf = config['QualityCheck']['ref']['maf']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_hwe = config['QualityCheck']['own']['hwe']
+ref_hwe = config['QualityCheck']['ref']['hwe']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_het = config['QualityCheck']['own']['heterozygosity']['StandardDeviations']
+ref_het = config['QualityCheck']['ref']['heterozygosity']['StandardDeviations']
+#---------------------------------------------------------------------------------------------------------------------#
+
+own_QC_LD_Window = config['QualityCheck']['own']['heterozygosity']['LDPruning']['WindowSize']
+own_QC_LD_Shift = config['QualityCheck']['own']['heterozygosity']['LDPruning']['Shift']
+own_QC_LD_Coefficient = config['QualityCheck']['own']['heterozygosity']['LDPruning']['CorrelationCoefficient']
+#---------------------------------------------------------------------------------------------------------------------#
+
+ref_QC_LD_Window = config['QualityCheck']['ref']['heterozygosity']['LDPruning']['WindowSize']
+ref_QC_LD_Shift = config['QualityCheck']['ref']['heterozygosity']['LDPruning']['Shift']
+ref_QC_LD_Coefficient = config['QualityCheck']['ref']['heterozygosity']['LDPruning']['CorrelationCoefficient']
+#---------------------------------------------------------------------------------------------------------------------#
+
+ihs_maf = config['iHS']['maf']
+ihs_bins = config['iHS']['bins']
+#---------------------------------------------------------------------------------------------------------------------#
+
+xpehh_pop = config['xpEHH']['pop']
+xpehh_reference_pop = config['xpEHH']['reference_pop']
+xpehh_poptype = config['xpEHH']['pop_type']
+xpehh_bins = config['xpEHH']['bins']
+xpehh_mapping = config['xpEHH']['mapping_pop']
+#---------------------------------------------------------------------------------------------------------------------#
+
+admixture_LDWindow = config['ADMIXTURE']['LDPruning']['WindowSize']
+admixture_LDShift = config['ADMIXTURE']['LDPruning']['Shift']
+admixture_LDCoefficient = config['ADMIXTURE']['LDPruning']['CorrelationCoefficient']
+admixture_K = config['ADMIXTURE']['K']
+admixture_iterations = config['ADMIXTURE']['iterations']
+#---------------------------------------------------------------------------------------------------------------------#
+
+smartpca_ethnicity_pop = config['SmartPCA']['Ethnicity_pop'][0]
+smartpca_poptype = config['SmartPCA']['pop_type']
+smartpca_LDWindow = config['SmartPCA']['LDPruning']['WindowSize']
+smartpca_LDShift = config['SmartPCA']['LDPruning']['Shift']
+smartpca_LDCoefficient = config['SmartPCA']['LDPruning']['CorrelationCoefficient']
+#---------------------------------------------------------------------------------------------------------------------#
+
+treemix_migrationedges = config['TreeMIX']['MigrationEdges']
+treemix_root = config['TreeMIX']['Root']
+treemix_LDWindow = config['TreeMIX']['LDPruning']['WindowSize']
+treemix_LDShift = config['TreeMIX']['LDPruning']['Shift']
+treemix_LDCoefficient = config['TreeMIX']['LDPruning']['CorrelationCoefficient']
+#---------------------------------------------------------------------------------------------------------------------#
+
+
+rule all:
+    input:
+        expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+            ihs_bins = [ihs_bins],
+            ID = [own_ID],
+            chrom = [str(i) for i in range(1,chromosome_no + 1)]), ### iHS
+        
+        expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
+            k_value = [k for k in range(2,admixture_K+1)],
+            i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
+
+        expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            xpehh_pop = xpehh_pop,
+            pop_name = xpehh_pop + xpehh_reference_pop), ### XP-EHH
+
+        multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
+            '.evec' , '.eval'), ### SuperPop SmartPCA
+
+        multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
+            '.evec' , '.eval'), ### Ethnicity SmartPCA
+
+        expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
+            edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
+
+rule ChangeMissingIDs:
+    input:
+        vcf_file = "config/{ID}.vcf.gz",
+    output:
+        multiext("results/1_QualityCheck/1_{ID}_ChangedMissingIDs",
+            '.psam','.pvar','.pgen')
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --vcf {input.vcf_file} --make-pgen --threads {threads}"
+        " --set-missing-var-ids @:#:\$r:\$a --new-id-max-allele-len 3000"
+        " --out results/1_QualityCheck/1_{wildcards.ID}_ChangedMissingIDs --silent"
+
+rule KeepBiallelic:
+    input:
+        plink_file = multiext("results/1_QualityCheck/1_{ID}_ChangedMissingIDs",
+            '.psam','.pvar','.pgen')
+    output:
+        multiext("results/1_QualityCheck/2_{ID}_Biallelic",
+        '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --pfile results/1_QualityCheck/1_{wildcards.ID}_ChangedMissingIDs --make-pgen --threads {threads}"
+        " --min-alleles 2 --max-alleles 2 --out results/1_QualityCheck/2_{wildcards.ID}_Biallelic --silent"
+
+rule RemoveDuplicates:
+    input:
+        plink_file = multiext("results/1_QualityCheck/2_{ID}_Biallelic",
+            '.psam','.pvar','.pgen')
+    output:
+        multiext("results/1_QualityCheck/3_{ID}_RmDup",
+        '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --pfile results/1_QualityCheck/2_{wildcards.ID}_Biallelic --make-pgen --threads {threads}"
+        " --rm-dup exclude-all --out results/1_QualityCheck/3_{wildcards.ID}_RmDup --silent"
+
+rule VariantMissingness:
+    input:
+        plink_file = multiext("results/1_QualityCheck/3_{ID}_RmDup",
+            '.psam','.pvar','.pgen')
+    output:
+        multiext("results/1_QualityCheck/4_{ID}_Geno",
+            '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    run:
+        if wildcards.ID == own_ID:
+            geno = own_geno
+        elif wildcards.ID == ref_ID:
+            geno = ref_geno
+
+        shell(
+                "workflow/software/plink2 --pfile results/1_QualityCheck/3_{wildcards.ID}_RmDup --make-pgen"
+                " --geno {geno} --threads {threads}"
+                " --out results/1_QualityCheck/4_{wildcards.ID}_Geno --silent"
+            )
+
+rule IndividualMissingness:
+    input:
+        plink_file = multiext("results/1_QualityCheck/4_{ID}_Geno", '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/1_QualityCheck/5_{ID}_Mind", '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    run:
+        if wildcards.ID == own_ID:
+            mind = own_mind
+        elif wildcards.ID == ref_ID:
+            mind = ref_mind
+
+        shell(
+                "workflow/software/plink2 --pfile results/1_QualityCheck/4_{wildcards.ID}_Geno --make-pgen"
+                " --mind {mind} --threads {threads}"
+                " --out results/1_QualityCheck/5_{wildcards.ID}_Mind --silent"
+            )
+
+rule MinorAlleleFrequency:
+    input:
+        plink_file = multiext("results/1_QualityCheck/5_{ID}_Mind", '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/1_QualityCheck/6_{ID}_MAF", '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    run:
+        if wildcards.ID == own_ID:
+            maf = own_maf
+        elif wildcards.ID == ref_ID:
+            maf = ref_maf
+        
+        shell(
+                "workflow/software/plink2 --pfile results/1_QualityCheck/5_{wildcards.ID}_Mind --make-pgen"
+                " --maf {maf} --threads {threads}"
+                " --out results/1_QualityCheck/6_{wildcards.ID}_MAF --silent"
+            )
+
+rule HardyWeinbergEquilibriumCheck:
+    input:
+        plink_file = multiext("results/1_QualityCheck/6_{ID}_MAF", '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/1_QualityCheck/7_{ID}_HWE", '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    run:
+        if wildcards.ID == own_ID:
+            hwe = own_hwe
+        elif wildcards.ID == ref_ID:
+            hwe = ref_hwe
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/6_{wildcards.ID}_MAF --make-pgen"
+            " --hwe {hwe} --threads {threads}"
+            " --out results/1_QualityCheck/7_{wildcards.ID}_HWE --silent"
+        )
+
+rule HeterozygosityCheck:
+    input:
+        plink_file = multiext("results/1_QualityCheck/7_{ID}_HWE", '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/1_QualityCheck/9_{ID}_Heterozygosity", '.psam' , '.pvar' , '.pgen')
+    threads: use_threads
+    run:
+        if wildcards.ID == own_ID:
+            het = own_het
+            window = own_QC_LD_Window
+            shift = own_QC_LD_Shift
+            coefficient = own_QC_LD_Coefficient
+
+        elif wildcards.ID == ref_ID:
+            het = ref_het
+            window = ref_QC_LD_Window
+            shift = ref_QC_LD_Shift
+            coefficient = ref_QC_LD_Coefficient
+
+        if het == False:
+            shell(
+                 "workflow/software/plink2 --pfile results/1_QualityCheck/7_{wildcards.ID}_HWE --make-pgen"
+                 " --out results/1_QualityCheck/9_{wildcards.ID}_Heterozygosity --threads {threads} --silent"
+                 )
+        elif het != False:
+		
+            shell(
+                "mkdir -p results/1_QualityCheck/8_Heterozygosity"
+            )
+            shell(
+                    "workflow/software/plink2 --pfile results/1_QualityCheck/7_{wildcards.ID}_HWE"
+                    " --indep-pairwise {window} {shift} {coefficient} --threads {threads}"
+                    " --out results/1_QualityCheck/8_Heterozygosity/8.1_{wildcards.ID}_IndepPairwise --silent"
+                )
+
+            shell(
+                    "workflow/software/plink2 --pfile results/1_QualityCheck/7_{wildcards.ID}_HWE --threads {threads}"
+                    " --extract results/1_QualityCheck/8_Heterozygosity/8.1_{wildcards.ID}_IndepPairwise.prune.in"
+                    " --het --out results/1_QualityCheck/8_Heterozygosity/8.2_{wildcards.ID}_HetCheck --silent"
+                )
+
+            shell(
+                "Rscript workflow/scripts/QC_Heterozygosity.Outliers.R"
+                " results/1_QualityCheck/8_Heterozygosity/8.2_{wildcards.ID}_HetCheck.het"
+                " results/1_QualityCheck/8_Heterozygosity/8.3_{wildcards.ID}_HetOutliers"
+                " {het}"
+            )
+
+            shell(
+                'sed \'s/"// g\' results/1_QualityCheck/8_Heterozygosity/8.3_{wildcards.ID}_HetOutliers'
+                ' | awk \'{{print$1}}\'> results/1_QualityCheck/8_Heterozygosity/8.4_{wildcards.ID}HetOutliersClean'
+            )
+
+            shell(
+                "workflow/software/plink2 --pfile results/1_QualityCheck/7_{wildcards.ID}_HWE"
+                " --make-pgen --remove results/1_QualityCheck/8_Heterozygosity/8.4_{wildcards.ID}HetOutliersClean"
+                " --out results/1_QualityCheck/9_{wildcards.ID}_Heterozygosity --threads {threads} --silent"
+            )
+
+rule RemoveALLMissingVariants:
+    input:
+        expand("results/1_QualityCheck/9_{ID}_Heterozygosity{extension}",
+        extension = ['.psam' , '.pvar' , '.pgen'],
+        ID = [own_ID]),
+
+        expand("results/1_QualityCheck/9_{ID}_Heterozygosity{extension}",
+        extension = ['.psam' , '.pvar' , '.pgen'],
+        ID = [ref_ID])
+    output:
+        expand("results/2_CommonVariants/1_{ID}_Geno0{extension}",
+            extension = ['.psam' , '.pvar' , '.pgen'],
+            ID = [own_ID , ref_ID])
+    threads: use_threads
+    run:
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/9_{own_ID}_Heterozygosity"
+            " --make-pgen --geno 0 --threads {threads}"
+            " --out results/2_CommonVariants/1_{own_ID}_Geno0 --silent"
+        )
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/9_{ref_ID}_Heterozygosity"
+            " --make-pgen --geno 0 --threads {threads}"
+            " --out results/2_CommonVariants/1_{ref_ID}_Geno0 --silent"
+        )
+
+rule FindCommonVariants:
+    input:
+        expand("results/2_CommonVariants/1_{ID}_Geno0{extension}",
+                extension = ['.psam' , '.pvar' , '.pgen'],
+                ID = [own_ID]),
+
+        expand("results/2_CommonVariants/1_{ID}_Geno0{extension}",
+                extension = ['.psam' , '.pvar' , '.pgen'],
+                ID = [ref_ID])
+    output:
+        expand("results/2_CommonVariants/5_{ID}_CommonVars{extension}",
+                extension = ['.psam' , '.pvar' , '.pgen'],
+                ID = [own_ID , ref_ID])
+    threads: use_threads
+    run:
+        shell(
+            "awk '{{print$3}}' results/2_CommonVariants/1_{own_ID}_Geno0.pvar"
+            " > results/2_CommonVariants/2_{own_ID}_Variants"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/2_CommonVariants/1_{ref_ID}_Geno0"
+            " --make-pgen --extract results/2_CommonVariants/2_{own_ID}_Variants"
+            " --out results/2_CommonVariants/3_{ref_ID}_CommonVars --threads {threads} --silent"
+        )
+
+        shell(
+            "awk '{{print$3}}' results/2_CommonVariants/3_{ref_ID}_CommonVars.pvar"
+            " > results/2_CommonVariants/4_{ref_ID}_CommonVars"
+        )
+        shell(
+            "workflow/software/plink2 --pfile results/2_CommonVariants/1_{own_ID}_Geno0"
+            " --extract results/2_CommonVariants/4_{ref_ID}_CommonVars --make-pgen"
+            " --out results/2_CommonVariants/5_{own_ID}_CommonVars --threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/2_CommonVariants/3_{ref_ID}_CommonVars"
+            " --make-pgen --out results/2_CommonVariants/5_{ref_ID}_CommonVars --threads {threads} --silent"
+        )
+
+rule FillingINFOTags:
+    input:
+        multiext("results/2_CommonVariants/5_{ID}_CommonVars",
+            '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/3_Phasing/1_{ID}_FilledINFO",
+            '.vcf.gz')
+    threads: use_threads
+    conda:
+        "envs/bcftools_env.yaml"
+    shell:
+            "workflow/software/plink2 --pfile results/2_CommonVariants/5_{wildcards.ID}_CommonVars"
+            " --recode vcf bgz --threads {threads}"
+            " --out results/3_Phasing/1_{wildcards.ID}_CommonVars --silent;"
+
+            "bcftools +fill-tags results/3_Phasing/1_{wildcards.ID}_CommonVars.vcf.gz -Oz"
+            " -o results/3_Phasing/1_{wildcards.ID}_FilledINFO.vcf.gz -- -t all;"
+
+            "bcftools index results/3_Phasing/1_{wildcards.ID}_FilledINFO.vcf.gz --threads {threads}"
+
+rule Phasing:
+    input:
+        multiext("results/3_Phasing/1_{ID}_FilledINFO",
+        ".vcf.gz")
+    output:
+        multiext("results/3_Phasing/2_{ID}_Phased/2_{ID}_Phased.chr{chrom}",
+        ".vcf.gz")
+    threads: use_threads
+    conda:
+        "envs/shapeit4_env.yaml"
+    log: "results/3_Phasing/2_{ID}_Phased/2_{ID}_Phased.chr{chrom}.log"
+    shell:
+        " shapeit4.2 --input results/3_Phasing/1_{wildcards.ID}_FilledINFO.vcf.gz"
+        " --map workflow/resources/GeneticMaps/chr{wildcards.chrom}.b38.gmap.gz"
+        " --region {wildcards.chrom}"
+        " --output results/3_Phasing/2_{wildcards.ID}_Phased/2_{wildcards.ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --thread {threads} &> {log}"
+
+rule ChromosomeMerging:
+    input:
+        expand("results/3_Phasing/2_{ID}_Phased/2_{ID}_Phased.chr{chrom}.vcf.gz",
+            chrom = [i for i in range(1,chromosome_no + 1)],
+            allow_missing = True)
+    output:
+        "results/3_Phasing/3_{ID}_Phased_Chromosome_Common.vcf.gz"
+    threads: use_threads
+    conda:
+        "envs/bcftools_env.yaml"
+    shell:
+        "ls -1v results/3_Phasing/2_{wildcards.ID}_Phased/*.vcf.gz"
+        " > results/3_Phasing/2_{wildcards.ID}_Phased/{wildcards.ID}FileList.txt;"
+
+        "bcftools concat --file-list results/3_Phasing/2_{wildcards.ID}_Phased/{wildcards.ID}FileList.txt"
+        " -o results/3_Phasing/3_{wildcards.ID}_Phased_Chromosome_Common.vcf.gz"
+        " -Oz --threads {threads};"
+
+        "bcftools index results/3_Phasing/3_{wildcards.ID}_Phased_Chromosome_Common.vcf.gz --threads {threads}"
+
+rule CompleteMerge:
+    input:
+        expand("results/3_Phasing/3_{ID}_Phased_Chromosome_Common.vcf.gz",
+        ID = [own_ID]),
+        expand("results/3_Phasing/3_{ID}_Phased_Chromosome_Common.vcf.gz",
+        ID = [ref_ID])
+    output:
+        "results/3_Phasing/4_Phased_CompleteMerge_Common.vcf.gz"
+    threads: use_threads
+    conda:
+        "envs/bcftools_env.yaml"
+    shell:
+        "ls -1v results/3_Phasing/*Phased_Chromosome_Common.vcf.gz > results/3_Phasing/4_DataFileList.txt;"
+
+        "bcftools merge --file-list results/3_Phasing/4_DataFileList.txt"
+        " -o results/3_Phasing/4_Phased_CompleteMerge_Common.vcf.gz"
+        " -Oz --threads {threads}"
+
+rule Merge_KeepBiallelic:
+    input:
+        vcf_file = "results/3_Phasing/4_Phased_CompleteMerge_Common.vcf.gz"
+    output:
+        multiext("results/3_Phasing/5_Merged_BiallelicOnly",
+            '.pgen' , '.pvar' , '.psam')
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --vcf {input.vcf_file} --min-alleles 2 --max-alleles 2 --make-pgen --out results/3_Phasing/5_Merged_BiallelicOnly"
+        " --silent --threads {threads}"
+
+rule Merge_RemoveDupes:
+    input:
+        multiext("results/3_Phasing/5_Merged_BiallelicOnly",
+            '.pgen' , '.pvar' , '.psam')
+    output:
+        multiext('results/3_Phasing/6_Merged_RemoveDuplicates',
+            '.pgen' , '.pvar' , '.psam')
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --pfile results/3_Phasing/5_Merged_BiallelicOnly --rm-dup exclude-all"
+        " --make-pgen --out results/3_Phasing/6_Merged_RemoveDuplicates --silent --threads {threads}"
+
+rule SortPopulations:
+    input:
+        multiext('results/3_Phasing/6_Merged_RemoveDuplicates',
+            '.pgen' , '.pvar' , '.psam')
+        
+    output:
+        'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
+    threads: use_threads
+    conda: "envs/pandas_env.yaml"
+    shell:
+        "python workflow/scripts/Sortpopulations_Helper.py --file config/{pop_file}"
+        " --own {own_ID} --ref {ref_ID};"
+
+        "workflow/software/plink2 --pfile results/3_Phasing/6_Merged_RemoveDuplicates --indiv-sort f results/3_Phasing/7_SampleList.txt"
+        " --make-pgen --silent --threads {threads} --out results/3_Phasing/7_Merged_SortedPopulations;"
+
+        "workflow/software/plink2 --pfile results/3_Phasing/7_Merged_SortedPopulations --recode vcf bgz --silent"
+        " --threads {threads} --out results/3_Phasing/7_Merged_SortedPopulations"
+
+rule RemoveIndels:
+    input:
+        'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
+    output:
+        "results/3_Phasing/8_Merged_RemoveIndels.vcf.gz"
+    threads: use_threads
+    shell:
+        "workflow/software/plink2 --vcf results/3_Phasing/7_Merged_SortedPopulations.vcf.gz --recode vcf bgz"
+        " --snps-only --silent --threads {threads} --out results/3_Phasing/8_Merged_RemoveIndels"
+
+rule iHS_Preparation:
+    input:
+        expand("results/1_QualityCheck/9_{ID}_Heterozygosity{extension}",
+            extension = [".pgen" , ".psam" , ".pvar"],
+            ID = [own_ID])
+    output:
+        "results/iHS/2_{own_ID}_Geno0.vcf.gz"
+    conda:
+        "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "mkdir -p results/iHS; "
+
+        "workflow/software/plink2 --pfile results/1_QualityCheck/9_{own_ID}_Heterozygosity"
+        " --maf {ihs_maf} --make-pgen --out results/iHS/1_{own_ID}_MAF --threads {threads} --silent; "
+
+        "workflow/software/plink2 --pfile results/iHS/1_{own_ID}_MAF"
+        " --geno 0 --recode vcf bgz --out results/iHS/2_{own_ID}_Geno0 --threads {threads} --silent; "
+
+        "bcftools index results/iHS/2_{own_ID}_Geno0.vcf.gz --threads {threads}"
+
+rule iHS_Phasing:
+    input:
+        expand("results/iHS/2_{ID}_Geno0.vcf.gz",
+        ID = [own_ID])
+    output:
+        "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz"
+    conda:
+        "envs/shapeit4_env.yaml"
+    log: "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.log"
+    threads: use_threads
+    shell:
+        "shapeit4.2 --input results/iHS/2_{own_ID}_Geno0.vcf.gz"
+        " --map workflow/resources/GeneticMaps/chr{wildcards.chrom}.b38.gmap.gz"
+        " --region {wildcards.chrom}"
+        " --output results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --thread {threads} &> {log}"
+
+rule iHS_MapCreation:
+    input:
+        expand("results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz",
+            ID = [own_ID],
+            allow_missing = True)
+    output:
+        expand("results/iHS/{ID}_iHS.Maps/{ID}.chr{chrom}.iHS.Maps",
+            ID = [own_ID],
+            allow_missing = True)
+    shell:
+        "python workflow/scripts/iHS_MapMaker.py --input results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --output results/iHS/{own_ID}_iHS.Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
+
+###################     iHS has hardcoded removal of variants with MAF <0.05. REMOVE THIS HARDCODE ############################
+################## Change rule so that rule created log file is deleted ###################
+rule iHS:
+    input:
+        "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz",
+        "results/iHS/{ID}_iHS.Maps/{ID}.chr{chrom}.iHS.Maps"
+    output:
+        "results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out"
+    log: temp("results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out.log")
+    threads: use_threads
+    conda: "envs/selscan_env.yaml"
+    shell:
+        "selscan --ihs --vcf results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --map results/iHS/{own_ID}_iHS.Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
+        " --out results/iHS/iHS_Results/{own_ID}.chr{wildcards.chrom}_iHS.Result"
+        " --threads {threads} &> {log}"
+
+rule iHS_Normalization:
+    input:
+        expand("results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            allow_missing =  True)
+    output:
+        expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            ihs_bins = [ihs_bins],
+            allow_missing = True)
+    conda: "envs/selscan_env.yaml"
+    shell:
+        "norm --ihs --files results/iHS/iHS_Results/*.ihs.out --bins {ihs_bins};"
+        " mkdir -p results/iHS/Norm_{ihs_bins}.bins;"
+        " mv results/iHS/iHS_Results/*.norm results/iHS/Norm_{ihs_bins}.bins;"
+        " rm -f logfile"
+
+######################## Warning: No variants excluded by '--exclude bed1' ### It means that no variants removed by inversion regions file#########
+rule Pre_Admixture:
+    input:
+        "results/3_Phasing/8_Merged_RemoveIndels.vcf.gz"
+    output:
+        multiext("results/ADMIXTURE/2_LDPruned",
+            '.bim' , '.bed' , '.fam')
+    threads: use_threads
+    run:
+        shell(
+            'workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --exclude range workflow/resources/Inversion_Regions.txt'
+            ' --indep-pairwise {admixture_LDWindow} {admixture_LDShift} {admixture_LDCoefficient} --out results/ADMIXTURE/1_Indep-Pairwise'
+            ' --threads {threads} --silent'
+        )
+        shell(
+            'workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --make-bed --extract results/ADMIXTURE/1_Indep-Pairwise.prune.in'
+            ' --out results/ADMIXTURE/2_LDPruned --threads {threads} --silent'
+        )
+
+rule Admixture:
+    input:
+        multiext("results/ADMIXTURE/2_LDPruned",
+            '.bim' , '.bed' , '.fam')
+    output:
+        "results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q"
+    threads: use_threads
+    run:
+        shell(
+            "mkdir -p results/ADMIXTURE/K{wildcards.k_value};"
+            " mkdir -p results/ADMIXTURE/K{wildcards.k_value}/Run{wildcards.i}"
+        )
+
+        shell(
+            "cp results/ADMIXTURE/2_LDPruned.bed K{wildcards.k_value}_{wildcards.i}.bed;"
+            "cp results/ADMIXTURE/2_LDPruned.bim K{wildcards.k_value}_{wildcards.i}.bim;"
+            "cp results/ADMIXTURE/2_LDPruned.fam K{wildcards.k_value}_{wildcards.i}.fam"
+        )
+
+        shell(
+            "workflow/software/admixture --cv K{wildcards.k_value}_{wildcards.i}.bed {wildcards.k_value} -s $RANDOM -j{threads}"
+            " | tee Log_K{wildcards.k_value}_{wildcards.i}.out"
+        )
+
+        shell(
+            "mv K{wildcards.k_value}_{wildcards.i}.{wildcards.k_value}.Q results/ADMIXTURE/K{wildcards.k_value}/Run{wildcards.i};"
+            "mv K{wildcards.k_value}_{wildcards.i}.{wildcards.k_value}.P results/ADMIXTURE/K{wildcards.k_value}/Run{wildcards.i};"
+            "mv Log_K{wildcards.k_value}_{wildcards.i}.out results/ADMIXTURE/K{wildcards.k_value}/Run{wildcards.i}"
+        )
+
+        shell(
+            "rm K{wildcards.k_value}_{wildcards.i}*"
+        )
+
+rule XPEHH_PopulationPrep:
+    input:
+        "results/3_Phasing/8_Merged_RemoveIndels.vcf.gz"
+    output:
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz"
+    conda: "envs/pandas_env.yaml"
+    threads: use_threads
+    shell:
+        "mkdir -p results/XP-EHH;"
+        "mkdir -p results/XP-EHH/1_PopulationPrep;"
+
+        " python workflow/scripts/XPEHH_SplittingPopulations.py --file results/3_Phasing/7_FilteredPop.csv"
+        " --poptype {xpehh_poptype} --pop {wildcards.pop_name} --output results/XP-EHH/0_{wildcards.pop_name}.List.txt;"
+
+        "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --keep results/XP-EHH/0_{wildcards.pop_name}.List.txt"
+        " --recode vcf bgz --out results/XP-EHH/1_PopulationPrep/{wildcards.pop_name} --threads {threads} --silent"
+
+rule XPEHH_ChromSplit:
+    input:
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz"
+    output:
+        "results/XP-EHH/2_ChromosomeSplit/{pop_name}/{pop_name}.chr{chrom}.vcf.gz"
+    conda: "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "bcftools index -f results/XP-EHH/1_PopulationPrep/{wildcards.pop_name}.vcf.gz --threads {threads}; "
+
+        "bcftools view results/XP-EHH/1_PopulationPrep/{wildcards.pop_name}.vcf.gz -r {wildcards.chrom}"
+        " -Oz -o results/XP-EHH/2_ChromosomeSplit/{wildcards.pop_name}/{wildcards.pop_name}.chr{wildcards.chrom}.vcf.gz --threads {threads}"
+
+rule XPEHH_MapCreation:
+    input:
+        expand("results/XP-EHH/2_ChromosomeSplit/{xpehh_mapping}/{xpehh_mapping}.chr{chrom}.vcf.gz",
+            xpehh_mapping = xpehh_mapping,
+            allow_missing = True)
+    output:
+        "results/XP-EHH/XP-EHH.Maps/Chr{chrom}.map"
+    conda: 'envs/pandas_env.yaml'
+    shell:
+        "python workflow/scripts/XPEHH_MapMaker.py --input results/XP-EHH/2_ChromosomeSplit/{xpehh_mapping}/{xpehh_mapping}.chr{wildcards.chrom}.vcf.gz"
+        " --output results/XP-EHH/XP-EHH.Maps/Chr{wildcards.chrom}.map"
+    
+
+rule XPEHH:
+    input:
+        "results/XP-EHH/2_ChromosomeSplit/{pop_name}/{pop_name}.chr{chrom}.vcf.gz",
+        "results/XP-EHH/2_ChromosomeSplit/{xpehh_pop}/{xpehh_pop}.chr{chrom}.vcf.gz",
+        "results/XP-EHH/XP-EHH.Maps/Chr{chrom}.map"
+    output:
+        "results/XP-EHH/3_Output/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out"
+    conda: "envs/selscan_env.yaml"
+    log: 'results/XP-EHH/3_Output/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.log'
+    threads: use_threads
+    shell:
+        "selscan --xpehh --vcf results/XP-EHH/2_ChromosomeSplit/{xpehh_pop}/{xpehh_pop}.chr{wildcards.chrom}.vcf.gz"
+        " --vcf-ref results/XP-EHH/2_ChromosomeSplit/{wildcards.pop_name}/{wildcards.pop_name}.chr{wildcards.chrom}.vcf.gz"
+        " --map results/XP-EHH/XP-EHH.Maps/Chr{wildcards.chrom}.map"
+        " --out results/XP-EHH/3_Output/{wildcards.pop_name}/{xpehh_pop}_{wildcards.pop_name}.chr{wildcards.chrom}"
+        " --threads {threads} &> {log};"
+
+        " rm {log}"
+
+rule XPEHH_Normalization:
+    input:
+        expand("results/XP-EHH/3_Output/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            allow_missing = True)
+    output:
+        expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            allow_missing = True)
+    conda: "envs/selscan_env.yaml"
+    shell:
+        "norm --xpehh --files results/XP-EHH/3_Output/{wildcards.pop_name}/*.xpehh.out --bins {xpehh_bins} &> "
+        " results/XP-EHH/4_Normalization/{wildcards.pop_name}/{xpehh_pop}_{wildcards.pop_name}.out.norm.log; "
+        "mkdir -p results/XP-EHH/4_Normalization; "
+        "mv results/XP-EHH/3_Output/{wildcards.pop_name}/*.norm results/XP-EHH/4_Normalization/{wildcards.pop_name}/;"
+        "rm -f logfile "
+
+
+rule SmartPCA_Preparation:
+    input: "results/3_Phasing/8_Merged_RemoveIndels.vcf.gz"
+    output:
+        multiext("results/SmartPCA/2_LDPruned",
+            '.bed' , '.bim' , '.fam')
+    threads: use_threads
+    shell:
+        "mkdir -p results/SmartPCA; "
+
+        "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz "
+        "--indep-pairwise {smartpca_LDWindow} {smartpca_LDShift} {smartpca_LDCoefficient} "
+        "--exclude range workflow/resources/Inversion_Regions.txt "
+        "--silent --threads {threads} "
+        "--out results/SmartPCA/1_Indep-Pairwise; "
+
+        "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz "
+        "--make-bed --extract results/SmartPCA/1_Indep-Pairwise.prune.in "
+        "--out results/SmartPCA/2_LDPruned --threads {threads} --silent"
+
+rule SmartPCA_SuperPopCompare:
+    input:
+        multiext("results/SmartPCA/2_LDPruned",
+            '.bed' , '.bim' , '.fam')
+    output:
+        multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
+            '.evec' , '.eval')
+
+    conda: 'envs/eigensoft_env.yaml'
+    log: "results/SmartPCA/SuperPop/"
+    threads: use_threads
+    shell:
+        "mkdir -p results/SmartPCA/SuperPop; "
+
+        "awk -F ',' '{{print $3}}' results/3_Phasing/7_FilteredPop.csv | awk 'NR!=1 {{print}}' > results/SmartPCA/SuperPop/Population_Name_List.txt; "
+
+        "workflow/software/plink2 --bfile results/SmartPCA/2_LDPruned --make-bed --out results/SmartPCA/SuperPop/1_SuperPop_Only "
+        "--threads {threads} --silent; "
+
+        "awk 'FNR==NR{{a[NR]=$1;next}}{{$6=a[FNR]}}1' results/SmartPCA/SuperPop/Population_Name_List.txt"
+        " results/SmartPCA/SuperPop/1_SuperPop_Only.fam > results/SmartPCA/SuperPop/1_SuperPop_Only.fam.NEW; "
+
+        "mv results/SmartPCA/SuperPop/1_SuperPop_Only.fam results/SmartPCA/SuperPop/1_SuperPop_Only.fam.OLD; "
+
+        "cp results/SmartPCA/SuperPop/1_SuperPop_Only.fam.NEW results/SmartPCA/SuperPop/1_SuperPop_Only.fam; "
+
+        "mv results/SmartPCA/SuperPop/1_SuperPop_Only.fam results/SmartPCA/SuperPop/1_SuperPop_Only.pedind; "
+        "mv results/SmartPCA/SuperPop/1_SuperPop_Only.bim results/SmartPCA/SuperPop/1_SuperPop_Only.pedsnp; "
+
+        "python workflow/scripts/SmartPCA_Convertf.py --input results/SmartPCA/SuperPop/1_SuperPop_Only "
+        "--type EIGENSTRAT "
+        "--output results/SmartPCA/SuperPop/2_Convert "
+        "--location results/SmartPCA/SuperPop/; "
+
+        "convertf -p results/SmartPCA/SuperPop/2_par_Convert.txt &> results/SmartPCA/SuperPop/2_Convert.log; "
+
+        "python workflow/scripts/SmartPCA_smartpca.py --input results/SmartPCA/SuperPop/2_Convert"
+        " --output results/SmartPCA/SuperPop/3_SuperPop_SmartPCA"
+        " --threads {threads}"
+        " --location results/SmartPCA/SuperPop/;"
+
+        "smartpca -p results/SmartPCA/SuperPop/3_par_SmartPCA.txt &> results/SmartPCA/SuperPop/3_SuperPop_SmartPCA.log"
+
+rule SmartPCA_Ethnicity_Preparation:
+    input:
+        multiext("results/SmartPCA/2_LDPruned",
+                '.bed' , '.bim' , '.fam')
+    output:
+        "results/SmartPCA/Ethnicity/2_par_Convert.txt",
+        "results/SmartPCA/Ethnicity/3_par_SmartPCA.txt"
+    conda: "envs/pandas_env.yaml"
+    shell:
+        "mkdir -p results/SmartPCA/Ethnicity; "
+
+        "python workflow/scripts/SmartPCA_EthnicityPrep.py --file results/3_Phasing/7_FilteredPop.csv"
+        " --poptype {smartpca_poptype} --pop {smartpca_ethnicity_pop} --output results/SmartPCA/Ethnicity/; "
+
+        "workflow/software/plink2 --bfile results/SmartPCA/2_LDPruned --make-bed "
+        "--keep results/SmartPCA/Ethnicity/PopulationList.txt --threads {threads} --silent "
+        "--out results/SmartPCA/Ethnicity/1_Ethnicity_Only; "
+
+        "awk 'FNR==NR{{a[NR]=$1;next}}{{$6=a[FNR]}}1' results/SmartPCA/Ethnicity/EthnicityList.txt"
+        " results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam > results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam.NEW; "
+
+        "mv results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam.OLD; "
+        "cp results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam.NEW results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam; "
+
+        "mv results/SmartPCA/Ethnicity/1_Ethnicity_Only.fam results/SmartPCA/Ethnicity/1_Ethnicity_Only.pedind; "
+        "mv results/SmartPCA/Ethnicity/1_Ethnicity_Only.bim results/SmartPCA/Ethnicity/1_Ethnicity_Only.pedsnp; "
+
+        "python workflow/scripts/SmartPCA_Convertf.py --input results/SmartPCA/Ethnicity/1_Ethnicity_Only "
+        "--type EIGENSTRAT "
+        "--output results/SmartPCA/Ethnicity/2_Convert "
+        "--location results/SmartPCA/Ethnicity/;"
+
+        "python workflow/scripts/SmartPCA_smartpca.py --input results/SmartPCA/Ethnicity/2_Convert"
+        " --output results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA"
+        " --threads {threads}"
+        " --location results/SmartPCA/Ethnicity/;"
+
+rule SmartPCA_Ethnicity:
+    input:
+        "results/SmartPCA/Ethnicity/2_par_Convert.txt",
+        "results/SmartPCA/Ethnicity/3_par_SmartPCA.txt"
+    output:
+        multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
+            '.evec' , '.eval')
+    conda: "envs/eigensoft_env.yaml"
+    threads: use_threads
+    shell:
+        "convertf -p results/SmartPCA/Ethnicity/2_par_Convert.txt &> results/SmartPCA/Ethnicity/2_Convert.log; "
+        "smartpca -p results/SmartPCA/Ethnicity/3_par_SmartPCA.txt &> results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA.log"
+
+rule TreeMIX_Preparation:
+    input:
+        "results/3_Phasing/8_Merged_RemoveIndels.vcf.gz"
+    output:
+        "results/TreeMIX/2_LDPruned.treemix.frq.gz"
+    threads: use_threads
+    conda: "envs/python2_env.yaml"
+    shell:
+        "mkdir -p results/TreeMIX; "
+        
+        "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --silent --threads {threads}"
+        " --indep-pairwise {treemix_LDWindow} {treemix_LDShift} {treemix_LDCoefficient}"
+        " --exclude range workflow/resources/Inversion_Regions.txt --out results/TreeMIX/1_Indep-Pairwise; "
+
+        "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --silent --threads {threads}"
+        " --make-bed --extract results/TreeMIX/1_Indep-Pairwise.prune.in --out results/TreeMIX/2_LDPruned; "
+
+        "awk -F ',' '{{print \"0\", $1,$2}}' results/3_Phasing/7_FilteredPop.csv | awk 'NR!=1 {{print}}' > results/TreeMIX/ClustFile.clust; "
+
+        "workflow/software/plink-1.07/plink --noweb --bfile results/TreeMIX/2_LDPruned"
+        " --freq --missing --within results/TreeMIX/ClustFile.clust --out results/TreeMIX/2_LDPruned &> results/TreeMIX/Freq_Clust_Miss.log; "
+
+        "gzip results/TreeMIX/2_LDPruned.frq.strat; "
+
+        "python workflow/scripts/plink2treemix.py results/TreeMIX/2_LDPruned.frq.strat.gz results/TreeMIX/2_LDPruned.treemix.frq.gz; "
+
+rule TreeMIX:
+    input:
+        "results/TreeMIX/2_LDPruned.treemix.frq.gz"
+    output:
+        "results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz"   
+    conda: "envs/treemix_env.yaml"
+    shell:
+        "treemix -i results/TreeMIX/2_LDPruned.treemix.frq.gz -m {wildcards.edges} "
+        "-o results/TreeMIX/ME{wildcards.edges}/2_LDPruned.{wildcards.edges} "
+        "-root {treemix_root} > results/TreeMIX/ME{wildcards.edges}/ME{wildcards.edges}.log"
