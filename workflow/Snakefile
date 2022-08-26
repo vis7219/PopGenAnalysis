@@ -78,31 +78,25 @@ rule all:
         expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
             chrom = [str(i) for i in range(1,chromosome_no + 1)],
             ihs_bins = [ihs_bins],
-            ihs_pop = ihs_populations),
-        #'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
-
-        # expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
-        #     ihs_bins = [ihs_bins],
-        #     ID = [own_ID],
-        #     chrom = [str(i) for i in range(1,chromosome_no + 1)]), ### iHS
+            ihs_pop = ihs_populations), ### iHS
         
-        # expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
-        #     k_value = [k for k in range(2,admixture_K+1)],
-        #     i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
+        expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
+            k_value = [k for k in range(2,admixture_K+1)],
+            i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
 
-        # expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
-        #     chrom = [str(i) for i in range(1,chromosome_no + 1)],
-        #     xpehh_pop = xpehh_pop,
-        #     pop_name = xpehh_pop + xpehh_reference_pop), ### XP-EHH
+        expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            xpehh_pop = xpehh_pop,
+            pop_name = xpehh_pop + xpehh_reference_pop), ### XP-EHH
 
-        # multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
-        #     '.evec' , '.eval'), ### SuperPop SmartPCA
+        multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
+            '.evec' , '.eval'), ### SuperPop SmartPCA
 
-        # multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
-        #     '.evec' , '.eval'), ### Ethnicity SmartPCA
+        multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
+            '.evec' , '.eval'), ### Ethnicity SmartPCA
 
-        # expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
-        #     edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
+        expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
+            edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
 
 rule ChangeMissingIDs:
     input:
