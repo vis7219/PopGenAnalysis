@@ -1,6 +1,19 @@
 # PopGenAnalysis
 This repository contains the pipeline script for Population Genetics Analysis built using SnakeMake
 
+Version 1.2.0
+
+  1. iHS script functionality changed. Now iHS can be done on any population in the __Pop/SuperPop__ column for __own__ file. Additional rules added for this are:
+      * rule *iHS_Merge*
+      * rule *iHS_PopSplit*
+      * rule *iHS_PopChromSplit*
+  2. Made modifications in the iHS rules such that the results of iHS is neatly arranged in folder. The affected rules are:
+      * rule *iHS_Preparation*
+      * rule *iHS_Phasing*
+      * rule *iHS_Merge*
+      * rule *iHS_MapCreation*
+      * rule *iHS*
+      * rule *iHS_Normalization*
 
 Version 1.1.1
 
