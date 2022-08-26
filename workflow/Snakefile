@@ -40,6 +40,8 @@ ref_QC_LD_Coefficient = config['QualityCheck']['ref']['heterozygosity']['LDPruni
 
 ihs_maf = config['iHS']['maf']
 ihs_bins = config['iHS']['bins']
+ihs_populations = config['iHS']['pop']
+ihs_poptype = config['iHS']['pop_type']
 #---------------------------------------------------------------------------------------------------------------------#
 
 xpehh_pop = config['xpEHH']['pop']
@@ -73,7 +75,11 @@ treemix_LDCoefficient = config['TreeMIX']['LDPruning']['CorrelationCoefficient']
 
 rule all:
     input:
-        'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
+        expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            ihs_bins = [ihs_bins],
+            ihs_pop = ihs_populations),
+        #'results/3_Phasing/7_Merged_SortedPopulations.vcf.gz'
 
         # expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
         #     ihs_bins = [ihs_bins],
@@ -513,83 +519,135 @@ rule iHS_Preparation:
             extension = [".pgen" , ".psam" , ".pvar"],
             ID = [own_ID])
     output:
-        "results/iHS/2_{own_ID}_Geno0.vcf.gz"
+        "results/iHS/1_Preparation/2_{own_ID}_Geno0.vcf.gz"
     conda:
         "envs/bcftools_env.yaml"
     threads: use_threads
     shell:
-        "mkdir -p results/iHS; "
+        "mkdir -p results/iHS/1_Preparation; "
 
         "workflow/software/plink2 --pfile results/1_QualityCheck/9_{own_ID}_Heterozygosity"
-        " --maf {ihs_maf} --make-pgen --out results/iHS/1_{own_ID}_MAF --threads {threads} --silent; "
+        " --maf {ihs_maf} --make-pgen --out results/iHS/1_Preparation/1_{own_ID}_MAF --threads {threads} --silent; "
 
-        "workflow/software/plink2 --pfile results/iHS/1_{own_ID}_MAF"
-        " --geno 0 --recode vcf bgz --out results/iHS/2_{own_ID}_Geno0 --threads {threads} --silent; "
+        "workflow/software/plink2 --pfile results/iHS/1_Preparation/1_{own_ID}_MAF"
+        " --geno 0 --recode vcf bgz --out results/iHS/1_Preparation/2_{own_ID}_Geno0 --threads {threads} --silent; "
 
-        "bcftools index results/iHS/2_{own_ID}_Geno0.vcf.gz --threads {threads}"
+        "bcftools index results/iHS/1_Preparation/2_{own_ID}_Geno0.vcf.gz --threads {threads}"
 
 rule iHS_Phasing:
     input:
-        expand("results/iHS/2_{ID}_Geno0.vcf.gz",
+        expand("results/iHS/1_Preparation/2_{ID}_Geno0.vcf.gz",
         ID = [own_ID])
     output:
-        "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz"
+        "results/iHS/2_Phasing/{ID}_Phased.chr{chrom}.vcf.gz"
     conda:
         "envs/shapeit4_env.yaml"
-    log: "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.log"
+    log: "results/iHS/2_Phasing/{ID}_Phased.chr{chrom}.log"
     threads: use_threads
     shell:
-        "shapeit4.2 --input results/iHS/2_{own_ID}_Geno0.vcf.gz"
+        "shapeit4.2 --input results/iHS/1_Preparation/2_{own_ID}_Geno0.vcf.gz"
         " --map workflow/resources/GeneticMaps/chr{wildcards.chrom}.b38.gmap.gz"
         " --region {wildcards.chrom}"
-        " --output results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --output results/iHS/2_Phasing/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
         " --thread {threads} &> {log}"
+
+rule iHS_Merge:
+    input:
+        expand("results/iHS/2_Phasing/{ID}_Phased.chr{chrom}.vcf.gz",
+            ID = [own_ID],
+            chrom = [str(i) for i in range(1,chromosome_no + 1)])
+    output:
+        "results/iHS/3_{ID}_CompleteMerge.vcf.gz"
+    conda: "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "ls -1v results/iHS/2_Phasing/*.vcf.gz"
+        " > results/iHS/2_Phasing/{wildcards.ID}_FileList.txt; "
+
+        "bcftools concat --file-list results/iHS/2_Phasing/{wildcards.ID}_FileList.txt"
+        " -o results/iHS/3_{wildcards.ID}_CompleteMerge.vcf.gz"
+        " -Oz --threads {threads};"
+
+rule iHS_PopSplit:
+    input:
+        expand("results/iHS/3_{ID}_CompleteMerge.vcf.gz",
+            ID = [own_ID]),
+        "results/FilteredPop.csv"
+    output:
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz"
+    conda: "envs/pandas_env.yaml"
+    threads: use_threads
+    shell:
+        "mkdir -p results/iHS/5_Populations/{wildcards.ihs_pop}; "
+
+        "python workflow/scripts/iHS_SplittingPopulations.py --file results/FilteredPop.csv"
+        " --poptype {ihs_poptype} --pop {wildcards.ihs_pop} --output results/iHS/5_Populations/{wildcards.ihs_pop}/0_{wildcards.ihs_pop}.List.txt;"
+
+        "workflow/software/plink2 --vcf results/iHS/3_{own_ID}_CompleteMerge.vcf.gz --keep results/iHS/5_Populations/{wildcards.ihs_pop}/0_{wildcards.ihs_pop}.List.txt"
+        " --recode vcf bgz --out results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop} --threads {threads} --silent"
+
+rule iHS_PopChromSplit:
+    input: "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz"
+    output: "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}_Chr{chrom}.vcf.gz"
+    conda: "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "bcftools index -f results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}.vcf.gz --threads {threads}; "
+
+        "bcftools view results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}.vcf.gz -r {wildcards.chrom}"
+        " -Oz -o results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}_Chr{wildcards.chrom}.vcf.gz --threads {threads}"
+
 
 rule iHS_MapCreation:
     input:
-        expand("results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz",
+        expand("results/iHS/2_Phasing/{ID}_Phased.chr{chrom}.vcf.gz",
             ID = [own_ID],
             allow_missing = True)
     output:
-        expand("results/iHS/{ID}_iHS.Maps/{ID}.chr{chrom}.iHS.Maps",
+        expand("results/iHS/4_Maps/{ID}.chr{chrom}.iHS.Maps",
             ID = [own_ID],
             allow_missing = True)
     shell:
-        "python workflow/scripts/iHS_MapMaker.py --input results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
-        " --output results/iHS/{own_ID}_iHS.Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
+        "mkdir -p results/iHS/4_Maps; "
+
+        "python workflow/scripts/iHS_MapMaker.py --input results/iHS/2_Phasing/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
+        " --output results/iHS/4_Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
 
 ###################     iHS has hardcoded removal of variants with MAF <0.05. REMOVE THIS HARDCODE ############################
 ################## Change rule so that rule created log file is deleted ###################
 rule iHS:
     input:
-        "results/iHS/{ID}_Phased/{ID}_Phased.chr{chrom}.vcf.gz",
-        "results/iHS/{ID}_iHS.Maps/{ID}.chr{chrom}.iHS.Maps"
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}_Chr{chrom}.vcf.gz",
+        expand("results/iHS/4_Maps/{ID}.chr{chrom}.iHS.Maps",
+            ID = [own_ID],
+            allow_missing = True)
     output:
-        "results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out"
-    log: temp("results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out.log")
+        "results/iHS/6_Output/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out"
+    log: temp("results/iHS/6_Output/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.log")
     threads: use_threads
     conda: "envs/selscan_env.yaml"
     shell:
-        "selscan --ihs --vcf results/iHS/{own_ID}_Phased/{own_ID}_Phased.chr{wildcards.chrom}.vcf.gz"
-        " --map results/iHS/{own_ID}_iHS.Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
-        " --out results/iHS/iHS_Results/{own_ID}.chr{wildcards.chrom}_iHS.Result"
+        "selscan --ihs --vcf results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}_Chr{wildcards.chrom}.vcf.gz"
+        " --map results/iHS/4_Maps/{own_ID}.chr{wildcards.chrom}.iHS.Maps"
+        " --out results/iHS/6_Output/{wildcards.ihs_pop}/{wildcards.ihs_pop}.chr{wildcards.chrom}_iHS.Result"
         " --threads {threads} &> {log}"
 
 rule iHS_Normalization:
     input:
-        expand("results/iHS/iHS_Results/{ID}.chr{chrom}_iHS.Result.ihs.out",
+        expand("results/iHS/6_Output/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out",
             chrom = [str(i) for i in range(1,chromosome_no + 1)],
-            allow_missing =  True)
+            allow_missing = True)
     output:
-        expand("results/iHS/Norm_{ihs_bins}.bins/{ID}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+        expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
             chrom = [str(i) for i in range(1,chromosome_no + 1)],
             ihs_bins = [ihs_bins],
             allow_missing = True)
     conda: "envs/selscan_env.yaml"
     shell:
-        "norm --ihs --files results/iHS/iHS_Results/*.ihs.out --bins {ihs_bins};"
-        " mkdir -p results/iHS/Norm_{ihs_bins}.bins;"
-        " mv results/iHS/iHS_Results/*.norm results/iHS/Norm_{ihs_bins}.bins;"
+        "norm --ihs --files results/iHS/6_Output/{wildcards.ihs_pop}/*.ihs.out --bins {ihs_bins} &> "
+        "results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop}/{wildcards.ihs_pop}_Normalization.log;"
+        " mkdir -p results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop};"
+        " mv results/iHS/6_Output/{wildcards.ihs_pop}/*.norm results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop};"
         " rm -f logfile"
 
 ######################## Warning: No variants excluded by '--exclude bed1' ### It means that no variants removed by inversion regions file#########
