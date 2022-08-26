@@ -1,6 +1,26 @@
 # PopGenAnalysis
 This repository contains the pipeline script for Population Genetics Analysis built using SnakeMake
 
+How to run:
+  1. Install conda. Please refer to this website for more details. <p>https://docs.conda.io/en/latest/miniconda.html<p>
+  2. Install mamba.
+    
+    conda activate base
+    conda install mamba
+  3. Install SnakeMake.
+  
+    conda create -n snakemake
+    conda activate snakemake
+    conda install snakemake
+  4. Run the script.
+    
+    cd PopGenAnalysis
+    snakemake --use-cores 1 --use-conda
+  4. If running in a slurm cluster.
+  
+    cd PopGenAnalysis
+    snakemake --profile slurm --use-conda
+
 Version 1.2.0
 
   1. iHS script functionality changed. Now iHS can be done on any population in the __Pop/SuperPop__ column for __own__ file. Additional rules added for this are:
