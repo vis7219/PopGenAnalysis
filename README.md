@@ -21,6 +21,11 @@ How to run:
     cd PopGenAnalysis
     snakemake --profile slurm --use-conda
 
+Version 1.2.1
+
+  1. Indexing of a vcf file was done every time a rule was invoked. This led to problems when running in clusters since multiple nodes are re-writing the index files which cause some the rules in some nodes to not recognize the index file. New rules for indexing added.
+  2. Location of the 'Filteredpop.csv' file was changed in multiple rules to the new location.
+
 Version 1.2.0
 
   1. iHS script functionality changed. Now iHS can be done on any population in the __Pop/SuperPop__ column for __own__ file. Additional rules added for this are:
