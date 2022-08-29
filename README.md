@@ -23,7 +23,7 @@ How to run:
 
 Version 1.2.2
 
-  All the analysis are now togglable by to On/Off from the config file.
+  All the analysis are now togglable to On/Off from the config file.
 
 Version 1.2.1
 
