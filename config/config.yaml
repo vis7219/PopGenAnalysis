@@ -6,6 +6,13 @@ population_file: Pop.csv
 chromosome: 2
 threads:  8
 
+Analysis:
+  ADMIXTURE:  True
+  SmartPCA: True
+  iHS:  True
+  XPEHH:  True
+  TreeMIX:  True
+
 QualityCheck:
   own:
     geno:  0.02
@@ -19,7 +26,6 @@ QualityCheck:
         Shift:  10
         CorrelationCoefficient:  0.15
       
-
   ref:
     geno:  0.02
     mind:  0.03

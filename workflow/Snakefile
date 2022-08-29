@@ -73,30 +73,60 @@ treemix_LDCoefficient = config['TreeMIX']['LDPruning']['CorrelationCoefficient']
 #---------------------------------------------------------------------------------------------------------------------#
 
 
+do_ADMIXTURE = config['Analysis']['ADMIXTURE']
+do_SmartPCA = config['Analysis']['SmartPCA']
+do_iHS = config['Analysis']['iHS']
+do_xpehh = config['Analysis']['XPEHH']
+do_TreeMIX = config['Analysis']['TreeMIX']
+#---------------------------------------------------------------------------------------------------------------------#
+
+
+results_iHS = expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+                chrom = [str(i) for i in range(1,chromosome_no + 1)],
+                ihs_bins = [ihs_bins],
+                ihs_pop = ihs_populations)
+
+results_XPEHH = expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
+                    chrom = [str(i) for i in range(1,chromosome_no + 1)],
+                    xpehh_pop = xpehh_pop,
+                    pop_name = xpehh_pop + xpehh_reference_pop)
+
+results_ADMIXTURE = expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
+                        k_value = [k for k in range(2,admixture_K+1)],
+                        i = [i for i in range(1,admixture_iterations+1)])
+
+results_SmartPCA_SuperPop = multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA" , '.evec' , '.eval')
+
+results_SmartPCA_Ethnicity = multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA" , '.evec' , '.eval')
+
+results_TreeMIX = expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz", edges = [i for i in range(0, treemix_migrationedges+1)])
+
+rule_all_input_files = [results_iHS , results_XPEHH , results_ADMIXTURE , results_SmartPCA_Ethnicity,
+                        results_SmartPCA_SuperPop , results_TreeMIX]
+#---------------------------------------------------------------------------------------------------------------------#
+
+
+if do_ADMIXTURE == False:
+    rule_all_input_files.remove(results_ADMIXTURE)
+
+if do_SmartPCA == False:
+    rule_all_input_files.remove(results_SmartPCA_Ethnicity)
+    rule_all_input_files.remove(results_SmartPCA_SuperPop)
+
+if do_iHS == False:
+    rule_all_input_files.remove(results_iHS)
+
+if do_xpehh == False:
+    rule_all_input_files.remove(results_XPEHH)
+
+if do_TreeMIX == False:
+    rule_all_input_files.remove(results_TreeMIX)
+#---------------------------------------------------------------------------------------------------------------------#
+
+
 rule all:
     input:
-        expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
-            chrom = [str(i) for i in range(1,chromosome_no + 1)],
-            ihs_bins = [ihs_bins],
-            ihs_pop = ihs_populations), ### iHS
-        
-        #expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
-        #    k_value = [k for k in range(2,admixture_K+1)],
-        #    i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
-
-        expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
-            chrom = [str(i) for i in range(1,chromosome_no + 1)],
-            xpehh_pop = xpehh_pop,
-            pop_name = xpehh_pop + xpehh_reference_pop), ### XP-EHH
-
-        #multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
-        #    '.evec' , '.eval'), ### SuperPop SmartPCA
-
-        #multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
-        #    '.evec' , '.eval'), ### Ethnicity SmartPCA
-
-        #expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
-        #    edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
+        rule_all_input_files
 
 rule ChangeMissingIDs:
     input:
