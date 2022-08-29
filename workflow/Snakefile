@@ -80,23 +80,23 @@ rule all:
             ihs_bins = [ihs_bins],
             ihs_pop = ihs_populations), ### iHS
         
-        expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
-            k_value = [k for k in range(2,admixture_K+1)],
-            i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
+        #expand("results/ADMIXTURE/K{k_value}/Run{i}/K{k_value}_{i}.{k_value}.Q",
+        #    k_value = [k for k in range(2,admixture_K+1)],
+        #    i = [i for i in range(1,admixture_iterations+1)]), ### ADMIXTURE
 
         expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
             chrom = [str(i) for i in range(1,chromosome_no + 1)],
             xpehh_pop = xpehh_pop,
             pop_name = xpehh_pop + xpehh_reference_pop), ### XP-EHH
 
-        multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
-            '.evec' , '.eval'), ### SuperPop SmartPCA
+        #multiext("results/SmartPCA/SuperPop/3_SuperPop_SmartPCA",
+        #    '.evec' , '.eval'), ### SuperPop SmartPCA
 
-        multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
-            '.evec' , '.eval'), ### Ethnicity SmartPCA
+        #multiext("results/SmartPCA/Ethnicity/3_Ethnicity_SmartPCA",
+        #    '.evec' , '.eval'), ### Ethnicity SmartPCA
 
-        expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
-            edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
+        #expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz",
+        #    edges = [i for i in range(0, treemix_migrationedges+1)]) ### TreeMIX
 
 rule ChangeMissingIDs:
     input:
@@ -580,14 +580,25 @@ rule iHS_PopSplit:
         "workflow/software/plink2 --vcf results/iHS/3_{own_ID}_CompleteMerge.vcf.gz --keep results/iHS/5_Populations/{wildcards.ihs_pop}/0_{wildcards.ihs_pop}.List.txt"
         " --recode vcf bgz --out results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop} --threads {threads} --silent"
 
+rule iHS_PopIndex:
+    input:
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz"
+    output:
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz.csi"
+    conda:
+        "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "bcftools index -f results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}.vcf.gz --threads {threads};"
+
 rule iHS_PopChromSplit:
-    input: "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz"
+    input:
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz",
+        "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}.vcf.gz.csi"
     output: "results/iHS/5_Populations/{ihs_pop}/{ihs_pop}_Chr{chrom}.vcf.gz"
     conda: "envs/bcftools_env.yaml"
     threads: use_threads
     shell:
-        "bcftools index -f results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}.vcf.gz --threads {threads}; "
-
         "bcftools view results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}.vcf.gz -r {wildcards.chrom}"
         " -Oz -o results/iHS/5_Populations/{wildcards.ihs_pop}/{wildcards.ihs_pop}_Chr{wildcards.chrom}.vcf.gz --threads {threads}"
 
@@ -708,22 +719,31 @@ rule XPEHH_PopulationPrep:
         "mkdir -p results/XP-EHH;"
         "mkdir -p results/XP-EHH/1_PopulationPrep;"
 
-        " python workflow/scripts/XPEHH_SplittingPopulations.py --file results/3_Phasing/7_FilteredPop.csv"
+        " python workflow/scripts/XPEHH_SplittingPopulations.py --file results/FilteredPop.csv"
         " --poptype {xpehh_poptype} --pop {wildcards.pop_name} --output results/XP-EHH/0_{wildcards.pop_name}.List.txt;"
 
         "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --keep results/XP-EHH/0_{wildcards.pop_name}.List.txt"
         " --recode vcf bgz --out results/XP-EHH/1_PopulationPrep/{wildcards.pop_name} --threads {threads} --silent"
 
+rule XPEHH_PopIndex:
+    input: 
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz"
+    output: 
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz.csi"
+    conda: "envs/bcftools_env.yaml"
+    threads: use_threads
+    shell:
+        "bcftools index -f results/XP-EHH/1_PopulationPrep/{wildcards.pop_name}.vcf.gz --threads {threads}"
+
 rule XPEHH_ChromSplit:
     input:
-        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz"
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz",
+        "results/XP-EHH/1_PopulationPrep/{pop_name}.vcf.gz.csi"
     output:
         "results/XP-EHH/2_ChromosomeSplit/{pop_name}/{pop_name}.chr{chrom}.vcf.gz"
     conda: "envs/bcftools_env.yaml"
     threads: use_threads
     shell:
-        "bcftools index -f results/XP-EHH/1_PopulationPrep/{wildcards.pop_name}.vcf.gz --threads {threads}; "
-
         "bcftools view results/XP-EHH/1_PopulationPrep/{wildcards.pop_name}.vcf.gz -r {wildcards.chrom}"
         " -Oz -o results/XP-EHH/2_ChromosomeSplit/{wildcards.pop_name}/{wildcards.pop_name}.chr{wildcards.chrom}.vcf.gz --threads {threads}"
 
@@ -810,7 +830,7 @@ rule SmartPCA_SuperPopCompare:
     shell:
         "mkdir -p results/SmartPCA/SuperPop; "
 
-        "awk -F ',' '{{print $3}}' results/3_Phasing/7_FilteredPop.csv | awk 'NR!=1 {{print}}' > results/SmartPCA/SuperPop/Population_Name_List.txt; "
+        "awk -F ',' '{{print $3}}' results/FilteredPop.csv | awk 'NR!=1 {{print}}' > results/SmartPCA/SuperPop/Population_Name_List.txt; "
 
         "workflow/software/plink2 --bfile results/SmartPCA/2_LDPruned --make-bed --out results/SmartPCA/SuperPop/1_SuperPop_Only "
         "--threads {threads} --silent; "
@@ -850,7 +870,7 @@ rule SmartPCA_Ethnicity_Preparation:
     shell:
         "mkdir -p results/SmartPCA/Ethnicity; "
 
-        "python workflow/scripts/SmartPCA_EthnicityPrep.py --file results/3_Phasing/7_FilteredPop.csv"
+        "python workflow/scripts/SmartPCA_EthnicityPrep.py --file results/FilteredPop.csv"
         " --poptype {smartpca_poptype} --pop {smartpca_ethnicity_pop} --output results/SmartPCA/Ethnicity/; "
 
         "workflow/software/plink2 --bfile results/SmartPCA/2_LDPruned --make-bed "
@@ -906,7 +926,7 @@ rule TreeMIX_Preparation:
         "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --silent --threads {threads}"
         " --make-bed --extract results/TreeMIX/1_Indep-Pairwise.prune.in --out results/TreeMIX/2_LDPruned; "
 
-        "awk -F ',' '{{print \"0\", $1,$2}}' results/3_Phasing/7_FilteredPop.csv | awk 'NR!=1 {{print}}' > results/TreeMIX/ClustFile.clust; "
+        "awk -F ',' '{{print \"0\", $1,$2}}' results/FilteredPop.csv | awk 'NR!=1 {{print}}' > results/TreeMIX/ClustFile.clust; "
 
         "workflow/software/plink-1.07/plink --noweb --bfile results/TreeMIX/2_LDPruned"
         " --freq --missing --within results/TreeMIX/ClustFile.clust --out results/TreeMIX/2_LDPruned &> results/TreeMIX/Freq_Clust_Miss.log; "

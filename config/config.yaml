@@ -3,7 +3,7 @@ samples:
   ref:  1KGP.vcf.gz
 
 population_file: Pop.csv
-chromosome: 3
+chromosome: 2
 threads:  8
 
 QualityCheck:
