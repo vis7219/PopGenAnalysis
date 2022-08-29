@@ -2,3 +2,4 @@ cluster: "sbatch --partition cbr_q_unres --cpus-per-task 72 --mem=140000
           -o slurm/logs/{rule}_{wildcards}
           -e slurm/logs/{rule}_{wildcards}"
 jobs: 20
+default-resources: [mem_mb=140000 , disk_mb=100000]
