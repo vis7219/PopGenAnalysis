@@ -21,6 +21,10 @@ How to run:
     cd PopGenAnalysis
     snakemake --profile slurm --use-conda
 
+Version 1.2.2
+
+  All the analysis are now togglable by to On/Off from the config file.
+
 Version 1.2.1
 
   1. Indexing of a vcf file was done every time a rule was invoked. This led to problems when running in clusters since multiple nodes are re-writing the index files which cause some the rules in some nodes to not recognize the index file. New rules for indexing added.
