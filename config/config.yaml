@@ -3,8 +3,8 @@ samples:
   ref:  1KGP.vcf.gz
 
 population_file: Pop.csv
-chromosome: 2
-threads:  8
+chromosome: 22
+threads:  72
 
 Analysis:
   ADMIXTURE:  True
