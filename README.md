@@ -49,6 +49,20 @@ The *--cores* option in the command line and the *threads* option in the config.
     
   Any necessary modifications required to run the pipeline in a cluster can be done in the *config.yaml* file in the *slurm* folder.
   
+The *--cpus-per-task* in the slurm config file and the *--cores* option in the command line work together.
+
+* If the threads provided in *--cores* is lesser than what is provided in *--cpus-per-task*, then SnakeMake will consider *--cores* input.  
+* If threads provided in *--cores* is more than what is provided by *--cpus-per-task*, SnakeMake will try to parallelize multiple jobs in a node to use maximum threads.
+
+__NOTE:__ Before running the pipeline in both cases, it is better to 
+  * Create a dag file to visually see if the job order is correct. It will almost always be correct, but if it is not, please inform me.
+  
+        snakemake --dag | dot -Tsvg > dag.svg
+        
+  * Perform a dry run to manually check if the inputs/outputs for all rules are correct and if the number of jobs makes sense.
+  
+        snakemake --cores 1 -n
+  
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Pipeline Configuration
 
@@ -148,10 +162,15 @@ The *config.yaml* in the config folder is where all the changes to the pipeline 
 |LDPruning Shift|int|No. of base pairs to shift the window|
 |LDPruning CorrelationCoefficient|float|Variant pairs above this value are considered to be LD, thus, removed|
 
+-------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Troubleshooting
 
+* The pipeline gives an error in the *rule HeterozygosityCheck* when running in a slurm cluster?  
+This could mean that the rule is not able to run an Rscript because it cannot find R. Usually in clusters, the softwares are loaded as modules. Try loading the R module and run the pipeline again.
 
---------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #### Version 1.2.2
 
   All the analysis are now togglable to On/Off from the config file.
