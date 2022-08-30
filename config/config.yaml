@@ -53,8 +53,8 @@ xpEHH:
   bins:  100
 
 ADMIXTURE:
-  K:  4
-  iterations:  3
+  K:  10
+  iterations:  50
   LDPruning:
     WindowSize:  1000
     Shift:  10
