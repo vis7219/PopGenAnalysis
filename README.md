@@ -26,7 +26,9 @@ The pipeline is divided into four sections:
         
    f. Hardy-Weinberg Equilibrium Check
         
-   g. Heterozygosity Check
+   g. Heterozygosity Ch
+   ![Pipeline_Flowchart](https://user-images.githubusercontent.com/52356143/187366638-ec7ec1fb-ff6b-454f-bbaf-847d2a9990e8.png)
+eck
         
   #### 2. Finding Common Variants
   
