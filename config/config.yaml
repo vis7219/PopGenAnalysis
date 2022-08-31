@@ -16,7 +16,7 @@ Analysis:
 QualityCheck:
   own:
     geno:  0.02
-    mind:  1
+    mind:  False
     maf:  0.001
     hwe:  1e-6
     heterozygosity:
@@ -28,7 +28,7 @@ QualityCheck:
       
   ref:
     geno:  0.02
-    mind:  0.03
+    mind:  False
     maf:  0.001
     hwe:  1e-6
     heterozygosity:
