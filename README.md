@@ -171,16 +171,16 @@ This could mean that the rule is not able to run an Rscript because it cannot fi
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#### Version 1.2.2
+#### Change 1.2.2
 
   All the analysis are now togglable to On/Off from the config file.
 
-#### Version 1.2.1
+#### Change 1.2.1
 
   1. Indexing of a vcf file was done every time a rule was invoked. This led to problems when running in clusters since multiple nodes are re-writing the index files which cause some the rules in some nodes to not recognize the index file. New rules for indexing added.
   2. Location of the 'Filteredpop.csv' file was changed in multiple rules to the new location.
 
-#### Version 1.2.0
+#### Change 1.2.0
 
   1. iHS script functionality changed. Now iHS can be done on any population in the __Pop/SuperPop__ column for __own__ file. Additional rules added for this are:
       * rule *iHS_Merge*
@@ -194,12 +194,12 @@ This could mean that the rule is not able to run an Rscript because it cannot fi
       * rule *iHS*
       * rule *iHS_Normalization*
 
-#### Version 1.1.1
+#### Change 1.1.1
 
   The new population list csv file containing samples which passed Quality Checks is now created by a new rule *CreatingNewPopFile*.
   With this, running iHS does not depend on the rule *SortPopulations* since the population list file was created under this rule before.
 
-#### Version 1.1.0 : QC Steps can be Run/Not Run
+#### Change 1.1.0 : QC Steps can be Run/Not Run
 
   Quality Check rules can be toggles **ON/OFF** by giving the input as a **Value/False** respectively in the config file.
   This includes-
