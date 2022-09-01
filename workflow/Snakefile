@@ -753,7 +753,7 @@ rule XPEHH_PopulationPrep:
         " --poptype {xpehh_poptype} --pop {wildcards.pop_name} --output results/XP-EHH/0_{wildcards.pop_name}.List.txt;"
 
         "workflow/software/plink2 --vcf results/3_Phasing/8_Merged_RemoveIndels.vcf.gz --keep results/XP-EHH/0_{wildcards.pop_name}.List.txt"
-        " --recode vcf bgz --out results/XP-EHH/1_PopulationPrep/{wildcards.pop_name} --threads {threads} --silent"
+        " --recode vcf bgz --geno 0 --out results/XP-EHH/1_PopulationPrep/{wildcards.pop_name} --threads {threads} --silent"
 
 rule XPEHH_PopIndex:
     input: 
