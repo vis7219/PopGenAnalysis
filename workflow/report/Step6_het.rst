@@ -1,0 +1,1 @@
+Heterozygosity rate of individuals after Step6

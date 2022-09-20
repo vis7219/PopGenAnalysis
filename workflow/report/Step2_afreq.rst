@@ -1,0 +1,1 @@
+Allele Frequency of variants after Step2

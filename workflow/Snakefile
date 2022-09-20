@@ -126,7 +126,31 @@ if do_TreeMIX == False:
 
 rule all:
     input:
-        rule_all_input_files
+        rule_all_input_files,
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID]),
+
+        expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_VariantMissingness.jpeg",
+            ID = [own_ID , ref_ID])
 
 rule ChangeMissingIDs:
     input:
@@ -975,3 +999,454 @@ rule TreeMIX:
         "treemix -i results/TreeMIX/2_LDPruned.treemix.frq.gz -m {wildcards.edges} "
         "-o results/TreeMIX/ME{wildcards.edges}/2_LDPruned.{wildcards.edges} "
         "-root {treemix_root} > results/TreeMIX/ME{wildcards.edges}/ME{wildcards.edges}.log"
+
+rule QCsteps_Statistics:
+    input:
+        multiext("results/1_QualityCheck/1_{ID}_ChangedMissingIDs", '.psam','.pvar','.pgen'),
+        multiext("results/1_QualityCheck/2_{ID}_Biallelic", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/3_{ID}_RmDup", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/4_{ID}_Geno", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/5_{ID}_Mind", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/6_{ID}_MAF", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/7_{ID}_HWE", '.psam' , '.pvar' , '.pgen'),
+        multiext("results/1_QualityCheck/9_{ID}_Heterozygosity", '.psam' , '.pvar' , '.pgen')
+    output:
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/1_ChangedMissingIDs",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/2_Biallelic",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/3_RmDup",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/4_Geno",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/5_Mind",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/6_MAF",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/7_HWE",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/9_Heterozygosity",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss')
+    threads: use_threads
+    run:
+        shell(
+            "mkdir -p results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics"
+        )
+
+        shell(
+            "touch results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/{wildcards.ID}_test.txt"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/1_{wildcards.ID}_ChangedMissingIDs "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/2_{wildcards.ID}_Biallelic "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/3_{wildcards.ID}_RmDup "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/4_{wildcards.ID}_Geno "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/5_{wildcards.ID}_Mind "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/6_{wildcards.ID}_MAF "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/7_{wildcards.ID}_HWE "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE "
+            "--threads {threads} --silent"
+        )
+
+        shell(
+            "workflow/software/plink2 --pfile results/1_QualityCheck/9_{wildcards.ID}_Heterozygosity "
+            "--freq --hardy --het --missing "
+            "--out results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity "
+            "--threads {threads} --silent"
+        )
+
+rule QCsteps_Plotting:
+    input:
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/1_ChangedMissingIDs",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/2_Biallelic",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/3_RmDup",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/4_Geno",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/5_Mind",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/6_MAF",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/7_HWE",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss'),
+
+        multiext("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/9_Heterozygosity",
+            '.afreq' , '.hardy' , '.het' , '.log' , '.smiss' , '.vmiss')
+    output:
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_VariantMissingness.jpeg",
+                category = "Quality Check",
+                subcategory = "Step1: Changing Missing IDs",
+                caption = "report/Step1_vmiss.rst",
+            ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step1: Changing Missing IDs',
+                caption = "report/Step1_smiss.rst"
+            ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_Heterozygosity.jpeg",
+                category = "Quality Check",
+                subcategory = "Step1: Changing Missing IDs",
+                caption = "report/Step1_het.rst"
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_HWE.jpeg",
+                category = "Quality Check",
+                subcategory = "Step1: Changing Missing IDs",
+                caption = 'report/Step1_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_AlleleFrequency.jpeg",
+                category = "Quality Check",
+                subcategory = "Step1: Changing Missing IDs",
+                caption = 'report/Step1_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_VariantMissingness.jpeg",
+                category = "Quality Check",
+                subcategory = "Step2: Removing Multiallelic Variants",
+                caption = 'report/Step2_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_SampleMissingness.jpeg",
+                category = "Quality Check",
+                subcategory = 'Step2: Removing Multiallelic Variants',
+                caption = 'report/Step2_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_Heterozygosity.jpeg",
+                category = "Quality Check",
+                subcategory = 'Step2: Removing Multiallelic Variants',
+                caption = 'report/Step2_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_HWE.jpeg",
+                category = "Quality Check",
+                subcategory = 'Step2: Removing Multiallelic Variants',
+                caption = 'report/Step2_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_AlleleFrequency.jpeg",
+                category = "Quality Check",
+                subcategory = 'Step2: Removing Multiallelic Variants',
+                caption = 'report/Step2_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = "Step3: Removing Duplicates",
+                caption = 'report/Step3_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = "Step3: Removing Duplicates",
+                caption = 'report/Step3_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = "Step3: Removing Duplicates",
+                caption = 'report/Step3_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = "Step3: Removing Duplicates",
+                caption = 'report/Step3_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = "Step3: Removing Duplicates",
+                caption = 'report/Step3_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step4: Variant Missingness Check',
+                caption = 'report/Step4_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step4: Variant Missingness Check',
+                caption = 'report/Step4_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step4: Variant Missingness Check',
+                caption = 'report/Step4_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step4: Variant Missingness Check',
+                caption = 'report/Step4_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step4: Variant Missingness Check',
+                caption = 'report/Step4_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step5: Individual Missingness Check',
+                caption = 'report/Step5_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step5: Individual Missingness Check',
+                caption = 'report/Step5_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step5: Individual Missingness Check',
+                caption = 'report/Step5_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step5: Individual Missingness Check',
+                caption = 'report/Step5_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step5: Individual Missingness Check',
+                caption = 'report/Step5_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step6: Minor Allele Frequency Check',
+                caption = 'report/Step6_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step6: Minor Allele Frequency Check',
+                caption = 'report/Step6_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step6: Minor Allele Frequency Check',
+                caption = 'report/Step6_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step6: Minor Allele Frequency Check',
+                caption = 'report/Step6_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step6: Minor Allele Frequency Check',
+                caption = 'report/Step6_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step7: Hardy-Weinberg Equilibrium Check',
+                caption = 'report/Step7_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step7: Hardy-Weinberg Equilibrium Check',
+                caption = 'report/Step7_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step7: Hardy-Weinberg Equilibrium Check',
+                caption = 'report/Step7_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step7: Hardy-Weinberg Equilibrium Check',
+                caption = 'report/Step7_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step7: Hardy-Weinberg Equilibrium Check',
+                caption = 'report/Step7_afreq.rst'
+        ),
+
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_VariantMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step8: Heterozygosity Check',
+                caption = 'report/Step8_vmiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_SampleMissingness.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step8: Heterozygosity Check',
+                caption = 'report/Step8_smiss.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_Heterozygosity.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step8: Heterozygosity Check',
+                caption = 'report/Step8_het.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_HWE.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step8: Heterozygosity Check',
+                caption = 'report/Step8_hwe.rst'
+        ),
+        report(
+                "results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_AlleleFrequency.jpeg",
+                category = 'Quality Check',
+                subcategory = 'Step8: Heterozygosity Check',
+                caption = 'report/Step8_afreq.rst'
+        ),
+
+    conda: "envs/Plotting_env.yaml"
+    shell:
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/1_ChangedMissingIDs.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 1_ChangedMissingIDs; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/2_Biallelic.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 2_Biallelic; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/3_RmDup.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 3_RmDup; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/4_Geno.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 4_Geno; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/5_Mind.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 5_Mind; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/6_MAF.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 6_MAF; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/7_HWE.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 7_HWE; "
+
+        "python workflow/scripts/ReportPlotting.py "
+        "--afreq results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity.afreq "
+        "--hardy results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity.hardy "
+        "--het results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity.het "
+        "--smiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity.smiss "
+        "--vmiss results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics/9_Heterozygosity.vmiss "
+        "--id {wildcards.ID} "
+        "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
+        "--qcstep 9_Heterozygosity"
+
+#rule chek
