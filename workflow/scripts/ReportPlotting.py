@@ -125,7 +125,7 @@ def HardyPlot(hardy_file, sample_id , outpath , qcstep):
     ax.set_title(str(sample_id) + ": " + str(qcstep) + "-Hardy Plot")
 #    ax.set_title("1011GI: Changed Missing IDs Hardy-Weinberg Equilibrium")
     ax.set_xlabel("P value" , fontsize = 12)
-    ax.set_ylabel("No. of Individuals" , fontsize = 12)
+    ax.set_ylabel("No. of Variants" , fontsize = 12)
     ax.set_xticks(np.arange(0.0 , 1.1 , 0.1))
     
     #fig.savefig("1011GI:ChangedMissingIDs_HWE.jpeg", format = 'jpeg' , dpi = 600)
