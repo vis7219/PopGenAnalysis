@@ -62,7 +62,14 @@ __NOTE:__ Before running the pipeline in both cases, it is better to
   * Perform a dry run to manually check if the inputs/outputs for all rules are correct and if the number of jobs makes sense.
   
         snakemake --cores 1 -n
-  
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+## Report
+
+    snakemake --report
+    
+This is used to create a report of everything done by the pipeline. As of now, a detailed report for only Quality Check is available.
+
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Pipeline Configuration
 
@@ -170,6 +177,13 @@ The *config.yaml* in the config folder is where all the changes to the pipeline 
 This could mean that the rule is not able to run an Rscript because it cannot find R. Usually in clusters, the softwares are loaded as modules. Try loading the R module and run the pipeline again.
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### Change 1.3.0
+
+  New rules added to utilize Snakemake's report functionality. A detailed report for the first section of the pipeline, that is, 1. Quality Check can be created. The new rules which support this are-
+  
+  1. rule *QCsteps_Statistics*
+  2. rule *QCsteps_Plotting*
 
 #### Change 1.2.3
 
