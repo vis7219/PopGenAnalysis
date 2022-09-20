@@ -171,6 +171,10 @@ This could mean that the rule is not able to run an Rscript because it cannot fi
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 
+#### Change 1.2.3
+
+  There was a problem where VCF files has missing variants even after the rule *RemoveALLMissingVariants*. This caused problems in XP-EHH. Added another missing variant check in rule *XPEHH_PopulationPrep*. Hopefully it works.
+
 #### Change 1.2.2
 
   All the analysis are now togglable to On/Off from the config file.
