@@ -43,6 +43,9 @@ iHS:
   bins:  40
   pop:  ['Adikarnataka' , 'Iyengar' , 'Kolis' , 'Lingayath' , 'Marathas' , 'Deshastha_Brhamin' , 'Konkanastha_brahmin', 'Nadar' , 'Naidu' , 'Namboodari' , 'Parayan' , 'Vakkaliga' , 'Vidiki_Brhamin']
   pop_type:  Pop
+  threshold: 99
+  region_size: 200000
+  region_cutoff: 20
 
   
 xpEHH:

@@ -42,6 +42,9 @@ ihs_maf = config['iHS']['maf']
 ihs_bins = config['iHS']['bins']
 ihs_populations = config['iHS']['pop']
 ihs_poptype = config['iHS']['pop_type']
+ihs_threshold = config['iHS']['threshold']
+ihs_region_size = config['iHS']['region_size']
+ihs_region_cutoff = config['iHS']['region_cutoff']
 #---------------------------------------------------------------------------------------------------------------------#
 
 xpehh_pop = config['xpEHH']['pop']
@@ -85,6 +88,9 @@ results_iHS = expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs
                 chrom = [str(i) for i in range(1,chromosome_no + 1)],
                 ihs_bins = [ihs_bins],
                 ihs_pop = ihs_populations)
+manhattan_iHS = expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Manhattan_Plot.png",
+        ihs_pop = ihs_populations,
+        ihs_bins = [ihs_bins])
 
 results_XPEHH = expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
                     chrom = [str(i) for i in range(1,chromosome_no + 1)],
@@ -102,7 +108,7 @@ results_SmartPCA_Ethnicity = multiext("results/SmartPCA/Ethnicity/3_Ethnicity_Sm
 results_TreeMIX = expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz", edges = [i for i in range(0, treemix_migrationedges+1)])
 
 rule_all_input_files = [results_iHS , results_XPEHH , results_ADMIXTURE , results_SmartPCA_Ethnicity,
-                        results_SmartPCA_SuperPop , results_TreeMIX]
+                        results_SmartPCA_SuperPop , results_TreeMIX, manhattan_iHS]
 #---------------------------------------------------------------------------------------------------------------------#
 
 
@@ -115,6 +121,7 @@ if do_SmartPCA == False:
 
 if do_iHS == False:
     rule_all_input_files.remove(results_iHS)
+    rule_all_input_files.remove(manhattan_iHS)
 
 if do_xpehh == False:
     rule_all_input_files.remove(results_XPEHH)
@@ -130,27 +137,27 @@ rule all:
 
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:1_ChangedMissingIDs_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:2_Biallelic_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:3_RmDup_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:4_Geno_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:5_Mind_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:6_MAF_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:7_HWE_VariantMissingness.jpeg",
             ID = [own_ID , ref_ID]),
-
         expand("results/1_QualityCheck/QC_Statistics/{ID}_Statistics/{ID}:9_Heterozygosity_VariantMissingness.jpeg",
-            ID = [own_ID , ref_ID])
+            ID = [own_ID , ref_ID]),
+
+        #expand('results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Region_Histogram.png',
+        #ihs_pop = ihs_populations,
+        #ihs_bins = [ihs_bins]),
+        #expand('results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Variant_Histogram.png',
+        #ihs_pop = ihs_populations,
+        #ihs_bins = [ihs_bins])
 
 rule ChangeMissingIDs:
     input:
@@ -1449,4 +1456,47 @@ rule QCsteps_Plotting:
         "--outpath results/1_QualityCheck/QC_Statistics/{wildcards.ID}_Statistics "
         "--qcstep 9_Heterozygosity"
 
-#rule chek
+rule iHS_Plotting:
+    input:
+        expand("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}.chr{chrom}_iHS.Result.ihs.out.{ihs_bins}bins.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            ihs_bins = [ihs_bins],
+            allow_missing = True)
+    output:
+        report("results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Manhattan_Plot.png",
+                category = 'iHS',
+                subcategory = "{ihs_pop}",
+                caption = "report/iHS_ManhattanPlot.rst"),
+        "results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Interesting_Variants.tsv",
+        "results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Interesting_Regions.tsv",
+        #report('results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Variant_Histogram.png',
+        #        category = 'iHS',
+        #        subcategory = "{ihs_pop}"),
+        #report('results/iHS/7_Normalization/{ihs_bins}_bins/{ihs_pop}/{ihs_pop}_iHS_Region_Histogram.png',
+        #        category = 'iHS',
+        #        subcategory = "{ihs_pop}")
+
+    conda: "envs/Plotting_env.yaml"
+    shell:
+        "python workflow/scripts/iHS_Merging_Results.py "
+        "--input_pop results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop}/{wildcards.ihs_pop} "
+        "--bins {ihs_bins} --chromosome {chromosome_no}; "
+
+        "python workflow/scripts/iHS_Plotting.py "
+        "--input_pop results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop}/{wildcards.ihs_pop} --bins {ihs_bins} "
+        "--threshold {ihs_threshold} --region_size {ihs_region_size} --region_cutoff {ihs_region_cutoff} "
+        "--chromosome {chromosome_no}; "
+
+        #"python workflow/scripts/iHS_Histograms.py "
+        #"--input_pop results/iHS/7_Normalization/{ihs_bins}_bins/{wildcards.ihs_pop}/{wildcards.ihs_pop} "
+        #"--threshold 99"
+
+rule XPEHH_Plotting:
+    input:
+        expand("results/XP-EHH/4_Normalization/{pop_name}/{xpehh_pop}_{pop_name}.chr{chrom}.xpehh.out.norm",
+            chrom = [str(i) for i in range(1,chromosome_no + 1)],
+            allow_missing = True)
+    output:
+    conda: "envs/Plotting_env.yaml"
+    shell:
+        "python workflow/scripts/XPEHH_Merging_Results.py --input_pop "
