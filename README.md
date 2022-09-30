@@ -178,7 +178,11 @@ This could mean that the rule is not able to run an Rscript because it cannot fi
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#### Changed 1.4.0
+#### Change 1.4.1
+
+  Disabled iHS Plotting due to some problems.
+
+#### Change 1.4.0
 
   New rules added to plot iHS graph. Along with this, new parameters added for iHS in the config file for graphing. Also added rules for XP-EHH graph, but it is disabled in this change. The new rules are-
   
