@@ -178,6 +178,13 @@ This could mean that the rule is not able to run an Rscript because it cannot fi
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 
+#### Changed 1.4.0
+
+  New rules added to plot iHS graph. Along with this, new parameters added for iHS in the config file for graphing. Also added rules for XP-EHH graph, but it is disabled in this change. The new rules are-
+  
+  1. rule *iHS_Plotting*
+  2. rule *xpehh_Plotting*
+
 #### Change 1.3.0
 
   New rules added to utilize Snakemake's report functionality. A detailed report for the first section of the pipeline, that is, 1. Quality Check can be created. The new rules which support this are-
