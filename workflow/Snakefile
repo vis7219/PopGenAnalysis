@@ -108,7 +108,7 @@ results_SmartPCA_Ethnicity = multiext("results/SmartPCA/Ethnicity/3_Ethnicity_Sm
 results_TreeMIX = expand("results/TreeMIX/ME{edges}/2_LDPruned.{edges}.treeout.gz", edges = [i for i in range(0, treemix_migrationedges+1)])
 
 rule_all_input_files = [results_iHS , results_XPEHH , results_ADMIXTURE , results_SmartPCA_Ethnicity,
-                        results_SmartPCA_SuperPop , results_TreeMIX, manhattan_iHS]
+                        results_SmartPCA_SuperPop , results_TreeMIX,] #manhattan_iHS]
 #---------------------------------------------------------------------------------------------------------------------#
 
 
